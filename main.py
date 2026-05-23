@@ -1,3 +1,5 @@
+from google.colab import drive
+drive.mount('/content/drive')
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
