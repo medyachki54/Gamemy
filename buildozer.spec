@@ -6,7 +6,7 @@
 [app]
 
 # (str) Title of your application
-title = My Application
+title = Cliker game
 
 # (str) Package name
 package.name = myapp
