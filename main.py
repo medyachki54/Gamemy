@@ -1,66 +1,75 @@
-import json
-import os
 from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.image import Image
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.clock import Clock
+import json
+import os
 
-# Функция для определения пути сохранения
-def get_save_path():
-    # Если мы на Android, сохраняем в папку приложения
-    if os.path.exists('/sdcard/'): 
-        return "save.json" 
-    # В Colab можно использовать путь, если нужно, но для APK лучше проще:
-    return "save.json"
+# Путь к файлу сохранения
+SAVE_PATH = "save.json"
 
-class GameScreen(FloatLayout):
+class GameScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.dna_count = 0
         
-        self.dna = 0
-        self.click_power = 1
-        self.auto_click_power = 0
+        # Фон
+        self.add_widget(Image(source='assets/dna_bg.jpg', allow_stretch=True, keep_ratio=False))
         
-        self.load_game() # Загружаем данные сразу при старте
-        
-        # --- Твои виджеты ---
-        self.dna_label = Label(text=f"ДНК: {self.dna}", font_size='30sp', pos_hint={'center_x': 0.5, 'top': 0.95})
+        # Счётчик
+        self.dna_label = Label(text="ДНК: 0", font_size='40sp', pos_hint={'center_x': 0.5, 'top': 0.9})
         self.add_widget(self.dna_label)
         
-        self.dna_btn = Button(text="Жми на ДНК!", size_hint=(0.4, 0.3), pos_hint={'center_x': 0.5, 'center_y': 0.5})
-        self.dna_btn.bind(on_press=self.on_dna_click)
-        self.add_widget(self.dna_btn)
+        # Кнопка ДНК
+        btn = Button(text="ЖМИ", size_hint=(0.3, 0.3), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        btn.bind(on_press=self.increment_dna)
+        self.add_widget(btn)
         
-        Clock.schedule_interval(self.update_auto_click, 1.0)
+        # Кнопка магазина
+        shop_btn = Button(text="Маг", size_hint=(0.1, 0.1), pos_hint={'right': 1, 'top': 1})
+        shop_btn.bind(on_press=lambda x: setattr(self.manager, 'current', 'shop'))
+        self.add_widget(shop_btn)
+        
+        # Кнопка настроек
+        set_btn = Button(text="Настр", size_hint=(0.1, 0.1), pos_hint={'right': 0.9, 'top': 1})
+        set_btn.bind(on_press=lambda x: setattr(self.manager, 'current', 'settings'))
+        self.add_widget(set_btn)
 
-    def save_game(self):
-        data = {"dna": self.dna, "power": self.click_power, "auto": self.auto_click_power}
-        with open(get_save_path(), "w") as f:
-            json.dump(data, f)
-
-    def load_game(self):
-        if os.path.exists(get_save_path()):
-            with open(get_save_path(), "r") as f:
-                data = json.load(f)
-                self.dna = data.get("dna", 0)
-                self.click_power = data.get("power", 1)
-                self.auto_click_power = data.get("auto", 0)
-
-    def on_dna_click(self, instance):
-        self.dna += self.click_power
-        self.dna_label.text = f"ДНК: {self.dna}"
+    def increment_dna(self, instance):
+        self.dna_count += 1
+        self.dna_label.text = f"ДНК: {self.dna_count}"
         self.save_game()
 
-    def update_auto_click(self, dt):
-        if self.auto_click_power > 0:
-            self.dna += self.auto_click_power
-            self.dna_label.text = f"ДНК: {self.dna}"
-            self.save_game()
+    def save_game(self):
+        with open(SAVE_PATH, "w") as f:
+            json.dump({"dna": self.dna_count}, f)
+
+class ShopScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_widget(Label(text="Это Магазин"))
+        back_btn = Button(text="Назад", size_hint=(0.2, 0.1), pos_hint={'center_x': 0.5, 'y': 0.1})
+        back_btn.bind(on_press=lambda x: setattr(self.manager, 'current', 'game'))
+        self.add_widget(back_btn)
+
+class SettingsScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_widget(Label(text="Это Настройки"))
+        back_btn = Button(text="Назад", size_hint=(0.2, 0.1), pos_hint={'center_x': 0.5, 'y': 0.1})
+        back_btn.bind(on_press=lambda x: setattr(self.manager, 'current', 'game'))
+        self.add_widget(back_btn)
 
 class MyGameApp(App):
     def build(self):
-        return GameScreen()
+        sm = ScreenManager()
+        sm.add_widget(GameScreen(name='game'))
+        sm.add_widget(ShopScreen(name='shop'))
+        sm.add_widget(SettingsScreen(name='settings'))
+        return sm
 
 if __name__ == '__main__':
     MyGameApp().run()
